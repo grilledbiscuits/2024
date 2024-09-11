@@ -60,7 +60,8 @@ TIM_HandleTypeDef htim16;
 
 // TODO: Define input variables
 
-uint8_t binaryvals[6] = {10101010,01010101,11001100,00110011,11110000,00001111};
+uint8_t binaryvals[] = {10101010,01010101,11001100,00110011,11110000,00001111};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -85,7 +86,8 @@ static void write_to_address(uint16_t address, uint8_t data);
 static uint8_t read_from_address(uint16_t address);
 static void spi_delay(uint32_t delay_in_us);
 /* USER CODE END PFP */
-
+int convert(long long n);
+char * toArray(int number);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
@@ -135,7 +137,28 @@ int main(void)
   
   for(int i = 0; i < 6; i++)
   {
-	  write_to_address(i*8, binaryvals[i]);
+	  uint16_t address = 8*i;
+
+	  unsigned char binval = binaryvals[i];
+	  unsigned char * binpoint = &binval;
+
+	  char  charval[8] = {0,0,0,0,0,0,0,0};
+	  for(i = 0; i < 8; i++)
+	  {
+		  charval[i] = binval[i];
+	  }
+	  //char * charpoint = &charval[8];
+
+	  //int decimal = convert(binval);
+	  char * charpointnew = toArray(charval);
+	  write_to_address(address, binval);
+	  HAL_Delay(1000);
+
+	  //*charpoint = read_from_address(address);
+
+	  lcd_putstring(binval);
+	  HAL_Delay(1000);
+	  lcd_command(CLEAR);
   }
 
   /* USER CODE END 2 */
@@ -160,7 +183,40 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+int convert(long long n) {
 
+    long long dec = 0;
+    int i = 0, rem;
+
+    while (n != 0) {
+
+        // get remainder of n divided by 10
+        rem = n % 10;
+
+        // add the rem * (2 ^ i) to dec
+        dec += rem << i; // Using bitwise shift instead of pow
+
+        // divide n by 10
+        n /= 10;
+
+        // increment i
+        ++i;
+    }
+
+    return dec;
+}
+
+char * toArray(int number)
+{
+    int n = (int)(log10(number) + 1);
+    int i;
+    char *numberArray = calloc(n, sizeof(char));
+    for (i = n-1; i >= 0; --i, number /= 10)
+    {
+        numberArray[i] = (number % 10) + '0';
+    }
+    return numberArray;
+}
 /**
   * @brief System Clock Configuration
   * @retval None
