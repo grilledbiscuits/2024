@@ -60,7 +60,7 @@ TIM_HandleTypeDef htim16;
 
 // TODO: Define input variables
 
-
+uint8_t binaryvals[6] = {10101010,01010101,11001100,00110011,11110000,00001111};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -112,9 +112,6 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-  /* USER CODE END SysInit */
-
   /* Initialize all configured peripherals */
   init_spi();
   MX_GPIO_Init();
@@ -126,7 +123,6 @@ int main(void)
 
   // Initialise LCD
   init_LCD();
-
   // Start timers
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim16);
@@ -137,7 +133,11 @@ int main(void)
 
   // TODO: Write all bytes to EEPROM using "write_to_address"
   
-  
+  for(int i = 0; i < 6; i++)
+  {
+	  write_to_address(i*8, binaryvals[i]);
+  }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -146,10 +146,10 @@ int main(void)
   {
 
 	// TODO: Poll ADC
-
+	  uint32_t ADCval = pollADC();
 
 	// TODO: Get CRR
-  
+	  CCR = ADCtoCCR(ADCval);
 
   // Update PWM value
 	__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3, CCR);
@@ -477,7 +477,9 @@ void TIM16_IRQHandler(void)
 	HAL_TIM_IRQHandler(&htim16);
 
 	// TODO: Initialise a string to output second line on LCD
-
+	  char charfromaddress = (char)read_from_address(0);
+	  lcd_putstring(&charfromaddress);
+	  lcd_command(CLEAR);
 
 	// TODO: Change LED pattern; output 0x01 if the read SPI data is incorrect
 	
@@ -488,8 +490,17 @@ void TIM16_IRQHandler(void)
 // TODO: Complete the writeLCD function
 void writeLCD(char *char_in){
   delay(3000);
-	
+  lcd_command(TWOLINE_MODE);
   
+  for(int i = 0; i<6; i++)
+  {
+	  //lcd_putstring("EEPROM byte:");
+	  //lcd_command(LINE_TWO);
+	  char charfromaddress = (char)read_from_address((uint16_t)*char_in);
+	  lcd_putstring(&charfromaddress);
+	  lcd_command(CLEAR);
+  }
+
 }
 
 // Get ADC value
