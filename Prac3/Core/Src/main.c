@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdlib.h>
 #include "stm32f0xx.h"
 #include <lcd_stm32f0.c>
 /* USER CODE END Includes */
@@ -59,7 +60,8 @@ TIM_HandleTypeDef htim16;
 /* USER CODE BEGIN PV */
 
 // TODO: Define input variables
-
+volatile uint16_t address = 0;
+uint8_t binaryvals[] = {10101010,01010101,11001100,00110011,11110000,00001111};
 
 /* USER CODE END PV */
 
@@ -112,9 +114,6 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-  /* USER CODE END SysInit */
-
   /* Initialize all configured peripherals */
   init_spi();
   MX_GPIO_Init();
@@ -126,7 +125,6 @@ int main(void)
 
   // Initialise LCD
   init_LCD();
-
   // Start timers
   HAL_TIM_Base_Start_IT(&htim6);
   HAL_TIM_Base_Start_IT(&htim16);
@@ -137,7 +135,11 @@ int main(void)
 
   // TODO: Write all bytes to EEPROM using "write_to_address"
   
-  
+  for (int i = 0; i <6; i++)
+  {
+	  address = i;
+	  write_to_address(address, binaryvals[i]);
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -146,10 +148,10 @@ int main(void)
   {
 
 	// TODO: Poll ADC
-
+	  uint32_t ADCval = pollADC();
 
 	// TODO: Get CRR
-  
+	  CCR = ADCtoCCR(ADCval);
 
   // Update PWM value
 	__HAL_TIM_SetCompare(&htim3, TIM_CHANNEL_3, CCR);
@@ -445,9 +447,17 @@ static void MX_GPIO_Init(void)
 void EXTI0_1_IRQHandler(void)
 {
 	// TODO: Add code to switch LED7 delay frequency
-	
-  
-
+	if(HAL_GetTick() > 100)
+	{
+		if(TIM6->ARR == 500-1)
+		{
+			TIM6->ARR = 1000-1;
+		}
+		else if(TIM6->ARR == 1000-1)
+		{
+			TIM6->ARR = 500-1;
+		}
+	}
 	HAL_GPIO_EXTI_IRQHandler(Button0_Pin); // Clear interrupt flags
 }
 
@@ -465,7 +475,29 @@ void TIM16_IRQHandler(void)
 	// Acknowledge interrupt
 	HAL_TIM_IRQHandler(&htim16);
 
+	char decimal[16];
 	// TODO: Initialise a string to output second line on LCD
+	if (address > 5){
+
+			address= 0;
+		}
+
+
+	uint8_t addrval = read_from_address(address);
+	spi_delay(100);
+	if (addrval == binaryvals[address]){
+
+		snprintf(decimal, sizeof(decimal), "%d", read_from_address(address));
+		writeLCD(decimal);
+
+
+	}
+	else{
+		writeLCD("SPI ERROR!");
+
+				//set LED72
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+	}
 
 
 	// TODO: Change LED pattern; output 0x01 if the read SPI data is incorrect
@@ -475,10 +507,15 @@ void TIM16_IRQHandler(void)
 }
 
 // TODO: Complete the writeLCD function
-void writeLCD(char *char_in){
-  delay(3000);
-	
-  
+void writeLCD(char *char_in)
+{
+	delay(3000);
+	lcd_command(CLEAR);
+	lcd_command(TWOLINE_MODE);
+	lcd_putstring("EEPROM byte:");
+	lcd_command(LINE_TWO);
+	lcd_putstring(char_in);
+
 }
 
 // Get ADC value
@@ -491,10 +528,10 @@ uint32_t pollADC(void){
 }
 
 // Calculate PWM CCR value
-uint32_t ADCtoCCR(uint32_t adc_val){
+uint32_t ADCtoCCR(uint32_t adc){
   // TODO: Calculate CCR value (val) using an appropriate equation
-
-	//return val;
+	uint32_t val = (adc * 47999) / 4095;
+	return val;
 }
 
 void ADC1_COMP_IRQHandler(void)
