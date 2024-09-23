@@ -48,7 +48,7 @@
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 DMA_HandleTypeDef hdma_tim2_ch1;
-volatile uint32_t source = 0;
+
 /* USER CODE BEGIN PV */
 // TODO: Add code for global variables, including LUTs
 
@@ -523,7 +523,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  //EXTI0_1_IRQHandler();
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

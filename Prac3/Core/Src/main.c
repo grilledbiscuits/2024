@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <stdlib.h>
 #include "stm32f0xx.h"
 #include <lcd_stm32f0.c>
 /* USER CODE END Includes */
@@ -59,7 +60,7 @@ TIM_HandleTypeDef htim16;
 /* USER CODE BEGIN PV */
 
 // TODO: Define input variables
-
+volatile uint16_t address = 0;
 uint8_t binaryvals[] = {10101010,01010101,11001100,00110011,11110000,00001111};
 
 /* USER CODE END PV */
@@ -86,8 +87,7 @@ static void write_to_address(uint16_t address, uint8_t data);
 static uint8_t read_from_address(uint16_t address);
 static void spi_delay(uint32_t delay_in_us);
 /* USER CODE END PFP */
-int convert(long long n);
-char * toArray(int number);
+
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
@@ -135,32 +135,11 @@ int main(void)
 
   // TODO: Write all bytes to EEPROM using "write_to_address"
   
-  for(int i = 0; i < 6; i++)
+  for (int i = 0; i <6; i++)
   {
-	  uint16_t address = 8*i;
-
-	  unsigned char binval = binaryvals[i];
-	  unsigned char * binpoint = &binval;
-
-	  char  charval[8] = {0,0,0,0,0,0,0,0};
-	  for(i = 0; i < 8; i++)
-	  {
-		  charval[i] = binval[i];
-	  }
-	  //char * charpoint = &charval[8];
-
-	  //int decimal = convert(binval);
-	  char * charpointnew = toArray(charval);
-	  write_to_address(address, binval);
-	  HAL_Delay(1000);
-
-	  //*charpoint = read_from_address(address);
-
-	  lcd_putstring(binval);
-	  HAL_Delay(1000);
-	  lcd_command(CLEAR);
+	  address = i;
+	  write_to_address(address, binaryvals[i]);
   }
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -183,40 +162,7 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
-int convert(long long n) {
 
-    long long dec = 0;
-    int i = 0, rem;
-
-    while (n != 0) {
-
-        // get remainder of n divided by 10
-        rem = n % 10;
-
-        // add the rem * (2 ^ i) to dec
-        dec += rem << i; // Using bitwise shift instead of pow
-
-        // divide n by 10
-        n /= 10;
-
-        // increment i
-        ++i;
-    }
-
-    return dec;
-}
-
-char * toArray(int number)
-{
-    int n = (int)(log10(number) + 1);
-    int i;
-    char *numberArray = calloc(n, sizeof(char));
-    for (i = n-1; i >= 0; --i, number /= 10)
-    {
-        numberArray[i] = (number % 10) + '0';
-    }
-    return numberArray;
-}
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -512,9 +458,6 @@ void EXTI0_1_IRQHandler(void)
 			TIM6->ARR = 500-1;
 		}
 	}
-
-  
-
 	HAL_GPIO_EXTI_IRQHandler(Button0_Pin); // Clear interrupt flags
 }
 
@@ -532,10 +475,29 @@ void TIM16_IRQHandler(void)
 	// Acknowledge interrupt
 	HAL_TIM_IRQHandler(&htim16);
 
+	char decimal[16];
 	// TODO: Initialise a string to output second line on LCD
-	  char charfromaddress = (char)read_from_address(0);
-	  lcd_putstring(&charfromaddress);
-	  lcd_command(CLEAR);
+	if (address > 5){
+
+			address= 0;
+		}
+
+	uint8_t addrval = read_from_address(address);
+	spi_delay(100);
+	if (addrval == binaryvals[address]){
+
+		snprintf(decimal, sizeof(decimal), "%d", read_from_address(address));
+		writeLCD(decimal);
+
+
+	}
+	else{
+		writeLCD("SPI ERROR!");
+
+				//set LED72
+				HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET);
+	}
+
 
 	// TODO: Change LED pattern; output 0x01 if the read SPI data is incorrect
 	
@@ -544,18 +506,14 @@ void TIM16_IRQHandler(void)
 }
 
 // TODO: Complete the writeLCD function
-void writeLCD(char *char_in){
-  delay(3000);
-  lcd_command(TWOLINE_MODE);
-  
-  for(int i = 0; i<6; i++)
-  {
-	  //lcd_putstring("EEPROM byte:");
-	  //lcd_command(LINE_TWO);
-	  char charfromaddress = (char)read_from_address((uint16_t)*char_in);
-	  lcd_putstring(&charfromaddress);
-	  lcd_command(CLEAR);
-  }
+void writeLCD(char *char_in)
+{
+	delay(3000);
+	lcd_command(CLEAR);
+	lcd_command(TWOLINE_MODE);
+	lcd_putstring("EEPROM byte:");
+	lcd_command(LINE_TWO);
+	lcd_putstring(char_in);
 
 }
 
@@ -569,10 +527,10 @@ uint32_t pollADC(void){
 }
 
 // Calculate PWM CCR value
-uint32_t ADCtoCCR(uint32_t adc_val){
+uint32_t ADCtoCCR(uint32_t adc){
   // TODO: Calculate CCR value (val) using an appropriate equation
-
-	//return val;
+	uint32_t val = (adc * 47999) / 4095;
+	return val;
 }
 
 void ADC1_COMP_IRQHandler(void)
