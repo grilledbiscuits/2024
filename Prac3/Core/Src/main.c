@@ -482,6 +482,7 @@ void TIM16_IRQHandler(void)
 			address= 0;
 		}
 
+
 	uint8_t addrval = read_from_address(address);
 	spi_delay(100);
 	if (addrval == binaryvals[address]){
