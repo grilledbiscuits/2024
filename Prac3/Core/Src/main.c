@@ -149,7 +149,10 @@ int main(void)
 
 	// TODO: Poll ADC
 	  uint32_t ADCval = pollADC();
-
+	  init_LCD();
+	  lcd_command(POWER_UP);
+	  lcd_putstring("fuck");
+	  pulse_strobe();
 	// TODO: Get CRR
 	  CCR = ADCtoCCR(ADCval);
 
