@@ -34,8 +34,31 @@ ASM_Main:
 
 @ TODO: Add code, labels and logic for button checks and LED patterns
 
+MOVS R2, #1
+MOVS R3, #0
+
 main_loop:
 
+	LDR R6, LONG_DELAY_CNT
+	ADDS R3, R3, #1
+
+delay:
+	SUBS R6, #1
+	BNE delay
+
+shift:
+	LSLS R2, R2, #1
+	SUBS R4, R3, #7
+	@BEQ reset
+	@BNE main_loop
+
+	@B main_loop
+
+reset:
+
+	@MOVS R2, #1
+	@MOVS R3, #0
+	@B main_loop
 
 write_leds:
 	STR R2, [R1, #0x14]
@@ -50,5 +73,5 @@ GPIOB_BASE:  		.word 0x48000400
 MODER_OUTPUT: 		.word 0x5555
 
 @ TODO: Add your own values for these delays
-LONG_DELAY_CNT: 	.word 0
+LONG_DELAY_CNT: 	.word 2000000
 SHORT_DELAY_CNT: 	.word 0
