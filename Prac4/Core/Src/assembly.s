@@ -36,10 +36,81 @@ ASM_Main:
 
 main_loop:
 
+	LDR R4, [R0, #0x10]		@IDR OFFSET VALUE
+
+	@DEFAULT STATE			(LED increments by 1 every 0.7sec)
+
+	MOVS R6, #0b1111
+	ANDS R4, R4, R6
+	CMP R4, #0b1111
+	BEQ incr_normal
+
+	@BUTTON 0 CHECK			(LED increments by 2)
+	CMP R4, #0b1110
+
+	@BUTTON 1 CHECK			(LED increments by 1 every 0.3sec)
+	CMP R4, #0b1101
+
+	@BUTTON 2 CHECK			(LEDs display 0xAA until released)
+	CMP R4, #0b1011
+
+	@BUTTON 1 AND 2 CHECK	(Increment by 2 every 0.3sec)
+	CMP R4, #0b1100
+
+	@BUTTON 3 CHECK	(Freeze)
+	CMP R4, #0b0111
+
+
+incr_normal:
+	CMP R2, #0b00000000		@(Check if there are any on LEDs to shift)
+	BEQ reset_slow			@(Send to restart (R2=1) block
+	LSLS R2, R2, #1			@Shift left by 1
+	BL longdelay
+	B maskled
+
+incr_fast:
+	CMP R2, #0b00000000		@(Check if there are any on LEDs to shift)
+	BEQ reset_fast			@(Send to restart (R2=1) block
+	LSLS R2, R2, #1			@Shift left by 1
+	BL shortdelay
+	B maskled
+
+reset_fast:
+	MOVS R2, #1
+	BL shortdelay
+	B maskled
+
+reset_slow:
+	MOVS R2, #1
+	BL longdelay
+	B maskled
+
+maskled:
+	MOVS R3, #0b11111111
+	ANDS R2, R2, R3
+	B write_leds
+
+
+
+longdelay:
+	LDR R3, LONG_DELAY_CNT
+	loop:
+		SUBS R3, R3, #1
+		BNE loop
+		BX LR
+
+shortdelay:
+	LDR R3, SHORT_DELAY_CNT
+	loop:
+		SUBS R3, R3, #1
+		BNE loop
+		BX LR
 
 write_leds:
+ 	LDR R0, GPIOB_BASE
 	STR R2, [R1, #0x14]
 	B main_loop
+
 
 @ LITERALS; DO NOT EDIT
 	.align
@@ -50,5 +121,5 @@ GPIOB_BASE:  		.word 0x48000400
 MODER_OUTPUT: 		.word 0x5555
 
 @ TODO: Add your own values for these delays
-LONG_DELAY_CNT: 	.word 0
-SHORT_DELAY_CNT: 	.word 0
+LONG_DELAY_CNT: 	.word 1400000
+SHORT_DELAY_CNT: 	.word 600000
